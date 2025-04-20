@@ -7,8 +7,8 @@ Một bot Discord sử dụng Python để tạo hình ảnh đội hình ARAM n
 ### 1. Clone project
 
 ```bash
-git clone https://github.com/your-user/my_discord_bot.git
-cd my_discord_bot
+git remote add origin https://github.com/RokeyHung/champion-lol.git
+cd champion-lol
 ```
 
 ### 2. Tạo môi trường ảo và cài thư viện
