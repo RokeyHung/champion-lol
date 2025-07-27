@@ -1,0 +1,5 @@
+```
+Các lệnh bot hỗ trợ:
+!champion-help - Hiển thị danh sách lệnh này
+!aram-random - Tạo đội hình ARAM ngẫu nhiên (2 đội, mỗi đội đủ tag)
+```
