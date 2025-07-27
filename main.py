@@ -25,8 +25,6 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    print(f"Received message: {message.content}")
-
     # Respond to the specific command
     if message.content == '!aram-random':
         try:

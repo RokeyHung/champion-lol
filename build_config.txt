@@ -1,5 +1,5 @@
 --name "Champion"
---add-data "C:/Users/hhungnm/Downloads/poppler-24.08.0/Library/bin/*;poppler"
+--add-data "./library/poppler-24.08.0/Library/bin/*;poppler"
 --add-data "C:/Program Files/GTK3-Runtime Win64/bin/*;GTK3-Runtime Win64"
 --add-data ".env;."
 --add-data "aram_champion_generator;aram_champion_generator"
