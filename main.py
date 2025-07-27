@@ -10,7 +10,8 @@ from src.analyze.command_handler import (
     handle_champion_cache,
     handle_champion_cache_more,
     handle_clear_team_cache,
-    handle_clear_all_cache
+    handle_clear_all_cache,
+    handle_call_teams
 )
 
 # Initialize the bot with required intents
@@ -31,6 +32,9 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    if client.user in message.mentions:
+        await handle_champion_help(message)
+        return
     if message.content == '!champion-help':
         await handle_champion_help(message)
         return
@@ -51,6 +55,9 @@ async def on_message(message):
         return
     if message.content == '!clear-all-cache':
         await handle_clear_all_cache(message)
+        return
+    if message.content == '!call-teams':
+        await handle_call_teams(message)
         return
 
 

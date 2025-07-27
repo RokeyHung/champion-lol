@@ -1,8 +1,9 @@
+```
 Tóm tắt logic random tướng chia đội:
 
 * Mỗi đội tối đa 15 tướng.
 
-* Giới hạn vai trò (TAG\_LIMITS):
+* Giới hạn vai trò (TAG_LIMITS):
   * Ví dụ: Assassin từ 1 đến 3 tướng, Marksman từ 2 đến 4.
   * Các vai trò khác: mỗi đội cố gắng có ít nhất 1 tướng nếu còn đủ.
 
@@ -11,10 +12,11 @@ Tóm tắt logic random tướng chia đội:
   * Tuy nhiên, tướng đội xanh cũ vẫn có thể vào đội đỏ mới (và ngược lại).
 
 * Trình tự random:
-  1. Chọn tướng cho các tag không nằm trong TAG\_LIMITS, cố gắng đảm bảo mỗi đội có ít nhất 1 tướng.
-  2. Chọn tướng cho các tag có trong TAG\_LIMITS theo giới hạn min/max.
+  1. Chọn tướng cho các tag không nằm trong TAG_LIMITS, cố gắng đảm bảo mỗi đội có ít nhất 1 tướng.
+  2. Chọn tướng cho các tag có trong TAG_LIMITS theo giới hạn min/max.
   3. Phân bổ các tướng còn lại vào hai đội sao cho hợp lệ và không trùng đội.
 
 * Không có tướng trùng lặp giữa hai đội trong cùng một lần random.
 
 Kết quả: Hai đội được tạo ra ngẫu nhiên, đa dạng vai trò, không lặp lại tướng đã xuất hiện ở cùng đội trước đó, đảm bảo tính công bằng và thú vị cho mỗi lần chia.
+```

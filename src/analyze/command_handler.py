@@ -1,5 +1,6 @@
 import sys
 import os
+import random
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -87,4 +88,26 @@ async def handle_clear_all_cache(message):
     _tag_champion_cache_time.clear()
     _last_blue_team_ids.clear()
     _last_red_team_ids.clear()
-    await message.channel.send('All bot cache cleared!') 
+    await message.channel.send('All bot cache cleared!')
+
+async def handle_call_teams(message):
+    if not message.guild:
+        await message.channel.send('This command can only be used in a server.')
+        return
+    voice_channels = [ch for ch in message.guild.channels if ch.type.name == 'voice']
+    voice_channels.sort(key=lambda c: c.position)
+    found = False
+    for i in range(len(voice_channels) - 1):
+        ch1, ch2 = voice_channels[i], voice_channels[i+1]
+        if len(ch1.members) == 0 and len(ch2.members) == 0:
+            # Ensure not first and last (no wrap-around)
+            if i == 0 and i+1 == len(voice_channels)-1:
+                continue
+            found = True
+            await message.channel.send(
+                f"Please join the call rooms for the match!\nBlue Team: <#{ch1.id}>\nRed Team: <#{ch2.id}>"
+            )
+            break
+    if not found:
+        await message.channel.send('Could not find two adjacent empty voice channels!')
+    return 
