@@ -1,38 +1,20 @@
 import requests
 import random
 import base64
-import io
 import os
 import time
-from weasyprint import HTML, CSS
-from pdf2image import convert_from_bytes
 from pathlib import Path
-import sys
+from html2image import Html2Image
 
 # ==== CONSTANTS ====
-CSS_MINIFIED = f"""
-@font-face {{
-    font-family: 'Open Sans';
-    src: url('../assets/Open_Sans/OpenSans-Regular.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
-}}
-@font-face {{
-    font-family: 'Open Sans';
-    src: url('../assets/Open_Sans/OpenSans-Bold.ttf') format('truetype');
-    font-weight: 700;
-    font-style: normal;
-}}
-body{{background:#1f2836;color:#ecf0f1;font-family:'Open Sans',sans-serif;justify-content:center;padding:20px}}.container{{display:flex;gap:40px}}.team-container{{display:flex;flex-direction:row;justify-content:space-around}}.team-box{{background-color:#374050;border-radius:4px;padding:1.25rem;width:100%;margin:0.5rem;padding-top:1rem;max-width:696px}}.team-title{{font-size:1.25rem;text-align:center;margin-bottom:1.25rem;margin-top:.5rem;font-family:'Open Sans',sans-serif;font-weight:700}}.team-list{{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;padding-inline-start:0}}.team-member{{display:flex;align-items:center}}.team-img{{width:4rem;height:4rem;margin-right:.75rem}}button{{display:block;margin:20px auto;padding:10px 20px;font-size:16px;background-color:#1abc9c;border:none;border-radius:5px;color:white;cursor:pointer}}
-"""
-CSS_PDF = CSS(string="""
-@page {
-    size: 1560px 550px;
-    margin: 0;
+MAX_TEAM_SIZE = 15
+TAG_LIMITS = {
+    "Assassin": [1, 3],
+    "Marksman": [2, 4],
 }
-""")
+
 IMG_WIDTH = 1560
-IMG_HEIGHT = 550
+IMG_HEIGHT = 600
 
 # ==== CACHE SETUP ====
 _version_cache = None
@@ -92,64 +74,134 @@ def get_tag_map(version, cache_expire=3600):
     return build_tag_map(champions, version, cache_expire)
 
 def pick_team_with_tags(tag_map, used_champions, team_size):
-    """Chọn mỗi tag 1 tướng cho mỗi đội, trả về (blue_team, red_team, used_champions)"""
-    import random
+    """
+    - Với tag có trong TAG_LIMITS:
+        + Nếu max == 0 → không cho phép tag này trong team
+        + Nếu min > 0 → bắt buộc phải có ít nhất min
+        + Nếu min = 0 → không bắt buộc, nhưng không vượt quá max
+    - Với tag không có trong TAG_LIMITS:
+        + Mỗi đội cần ít nhất 1 tướng nếu có đủ
+    """
+  
     blue_team = []
     red_team = []
-    for tag in tag_map:
-        tag_champs = [c for c in tag_map[tag] if c['id'] not in used_champions]
-        if len(tag_champs) < 2:
-            # Nếu chỉ còn 1 tướng cho tag này, chia cho 1 đội, đội còn lại sẽ random sau
-            chosen = random.sample(tag_champs, 1)
-            if len(blue_team) <= len(red_team):
-                blue_team.extend(chosen)
-            else:
-                red_team.extend(chosen)
-            used_champions.update(c['id'] for c in chosen)
-        else:
-            chosen = random.sample(tag_champs, 2)
-            blue_team.append(chosen[0])
-            red_team.append(chosen[1])
-            used_champions.add(chosen[0]['id'])
-            used_champions.add(chosen[1]['id'])
-    return blue_team, red_team, used_champions
+    blue_tag_count = {}
+    red_tag_count = {}
+    used_ids = set(used_champions)
 
-def pick_remaining_team_members(champions, used_champions, blue_team, red_team, team_size):
-    import random
-    remain_pool = [c for c in champions if c['id'] not in used_champions]
-    need_blue = team_size - len(blue_team)
-    need_red = team_size - len(red_team)
-    if need_blue > 0:
-        blue_team.extend(random.sample(remain_pool, need_blue))
-        used_champions.update(c['id'] for c in blue_team)
-        remain_pool = [c for c in remain_pool if c['id'] not in used_champions]
-    if need_red > 0:
-        red_team.extend(random.sample(remain_pool, need_red))
-    return blue_team, red_team
+    # Bước 1: xử lý tag không có trong TAG_LIMITS (bắt buộc ít nhất 1 mỗi đội nếu có đủ)
+    for tag, champs in tag_map.items():
+        if tag in TAG_LIMITS:
+            continue  # sẽ xử lý riêng
 
-def pick_random(arr, count):
-    return random.sample(arr, count)
+        available_champs = [c for c in champs if c['id'] not in used_ids]
+        if len(available_champs) < 2:
+            continue
+        
+        chosen = random.sample(available_champs, 2)
+        blue_team.append(chosen[0])
+        red_team.append(chosen[1])
+        used_ids.add(chosen[0]['id'])
+        used_ids.add(chosen[1]['id'])
 
-def generate_image(cache_expire=60*60*6):  # 6h = 21600s
+        for t in chosen[0].get('tags', []):
+            blue_tag_count[t] = blue_tag_count.get(t, 0) + 1
+        for t in chosen[1].get('tags', []):
+            red_tag_count[t] = red_tag_count.get(t, 0) + 1
+
+    # Bước 2: xử lý các tag có trong TAG_LIMITS (áp dụng min nếu > 0, và max nếu != 0)
+    for tag, (min_limit, max_limit) in TAG_LIMITS.items():
+        if max_limit == 0:
+            continue  # tag bị cấm hoàn toàn
+
+        available_champs = [c for c in tag_map.get(tag, []) if c['id'] not in used_ids]
+        if min_limit == 0:
+            continue  # không bắt buộc phải có từ đầu, chỉ xử lý khi còn slot ở bước sau
+
+        if len(available_champs) < 2 * min_limit:
+            continue  # không đủ để chia đều
+
+        chosen = random.sample(available_champs, 2 * min_limit)
+        for i in range(min_limit):
+            if len(blue_team) < team_size:
+                champ = chosen[i]
+                blue_team.append(champ)
+                used_ids.add(champ['id'])
+                for t in champ.get('tags', []):
+                    blue_tag_count[t] = blue_tag_count.get(t, 0) + 1
+
+            if len(red_team) < team_size:
+                champ = chosen[i + min_limit]
+                red_team.append(champ)
+                used_ids.add(champ['id'])
+                for t in champ.get('tags', []):
+                    red_tag_count[t] = red_tag_count.get(t, 0) + 1
+
+    # Bước 3: phân tướng còn lại vào team, tuân thủ max của TAG_LIMITS
+    all_champ_ids = set()
+    champ_id_to_obj = {}
+    for champs in tag_map.values():
+        for c in champs:
+            all_champ_ids.add(c['id'])
+            champ_id_to_obj[c['id']] = c
+
+    remain_ids = [cid for cid in all_champ_ids if cid not in used_ids]
+    random.shuffle(remain_ids)
+    remain_pool = [champ_id_to_obj[cid] for cid in remain_ids]
+
+    while remain_pool and (len(blue_team) < team_size or len(red_team) < team_size):
+        champ = remain_pool.pop()
+        tags = champ.get('tags', [])
+
+        can_add_blue = len(blue_team) < team_size
+        can_add_red = len(red_team) < team_size
+
+        for tag in tags:
+            if tag in TAG_LIMITS:
+                min_limit, max_limit = TAG_LIMITS[tag]
+                if max_limit == 0:
+                    can_add_blue = False
+                    can_add_red = False
+                if blue_tag_count.get(tag, 0) >= max_limit:
+                    can_add_blue = False
+                if red_tag_count.get(tag, 0) >= max_limit:
+                    can_add_red = False
+
+        if can_add_blue and len(blue_team) <= len(red_team):
+            blue_team.append(champ)
+            used_ids.add(champ['id'])
+            for tag in tags:
+                blue_tag_count[tag] = blue_tag_count.get(tag, 0) + 1
+        elif can_add_red:
+            red_team.append(champ)
+            used_ids.add(champ['id'])
+            for tag in tags:
+                red_tag_count[tag] = red_tag_count.get(tag, 0) + 1
+
+    return blue_team, red_team, used_ids
+
+
+def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
     # Fetch the latest version and champions data
     version = fetch_latest_version(cache_expire=cache_expire)
     champions = fetch_champions(version, cache_expire=cache_expire)
     tag_map = get_tag_map(version, cache_expire)
-    team_size = 15
+    team_size = MAX_TEAM_SIZE
     used_champions = set()
     blue_team, red_team, used_champions = pick_team_with_tags(tag_map, used_champions, team_size)
-    blue_team, red_team = pick_remaining_team_members(champions, used_champions, blue_team, red_team, team_size)
     # Đảm bảo không trùng tướng giữa 2 đội
     assert len(set(c['id'] for c in blue_team).intersection(c['id'] for c in red_team)) == 0
 
+    # Đọc nội dung CSS từ file với đường dẫn tuyệt đối
+    current_dir = Path(__file__).parent.resolve()
+    css_file_path = current_dir / 'css' / 'aram-style.css'
+   
     # HTML content with the teams and their champions
     html_content = f"""
     <html>
     <head>
         <meta charset='utf-8'>
-        <style>
-            {CSS_MINIFIED}
-        </style>
+        <link rel="stylesheet" href="{css_file_path}">
     </head>
     <body>
       <div class="team-container">
@@ -170,30 +222,24 @@ def generate_image(cache_expire=60*60*6):  # 6h = 21600s
     </html>
     """
 
-    # Convert HTML to PDF using WeasyPrint
-    html = HTML(string=html_content)
-    pdf_bytes = html.write_pdf(stylesheets=[CSS_PDF])
+    # Sử dụng html2image để render HTML thành ảnh PNG
+    hti = Html2Image(output_path='.')
+    output_filename = 'aram_teams.png'
+    hti.screenshot(
+        html_str=html_content,
+        save_as=output_filename,
+        size=(IMG_WIDTH, IMG_HEIGHT)
+    )
 
-    # Create poppler_path from project root using sys.path[0]
-    root = Path(sys.path[0])
-    poppler_path = root / "library" / "poppler-24.08.0" / "Library" / "bin"
+    # Đọc file ảnh vừa tạo và encode base64
+    with open(output_filename, 'rb') as img_file:
+        base64_image = base64.b64encode(img_file.read()).decode('utf-8')
 
-    # Convert the PDF to images (PNG format)
-    images = convert_from_bytes(
-        pdf_bytes, dpi=200, poppler_path=str(poppler_path)
-    )  # Optional: adjust DPI for better quality
-
-    # Resize the first page image to 1560x550
-    image = images[0]
-    image = image.resize((IMG_WIDTH, IMG_HEIGHT))
-
-    # Convert the resized image to a PNG and save it to BytesIO
-    image_bytes = io.BytesIO()
-    image.save(image_bytes, format='PNG')
-    image_bytes.seek(0)
-
-    # Convert the PNG image to Base64
-    base64_image = base64.b64encode(image_bytes.read()).decode('utf-8')
+    # Xóa file ảnh tạm nếu muốn (tuỳ chọn)
+    try:
+        os.remove(output_filename)
+    except Exception:
+        pass
 
     # Create the Data URL for the image
     data_url = f"data:image/png;base64,{base64_image}"
