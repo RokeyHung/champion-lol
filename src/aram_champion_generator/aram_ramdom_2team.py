@@ -90,22 +90,22 @@ def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=Non
     red_tag_count = {}
     used_ids = set(used_champions)
 
-    # Bước 1: xử lý tag không có trong TAG_LIMITS (bắt buộc ít nhất 1 mỗi đội nếu có đủ)
+    # Step 1: Handle tags not in TAG_LIMITS (must have at least 1 per team if available)
     for tag, champs in tag_map.items():
         if tag in TAG_LIMITS:
-            continue  # sẽ xử lý riêng
+            continue  # will handle separately
 
         available_champs = [c for c in champs if c['id'] not in used_ids]
         if len(available_champs) < 2:
             continue
         
-        # Loại tướng từng ở mỗi đội
+        # Remove each from each team
         blue_candidates = [c for c in available_champs if c['id'] not in exclude_blue_ids]
         red_candidates = [c for c in available_champs if c['id'] not in exclude_red_ids and c['id'] not in (blue_candidates[0]['id'] if blue_candidates else set())]
         if not blue_candidates or not red_candidates:
             continue
         blue_pick = random.choice(blue_candidates)
-        # Đảm bảo không trùng với blue_pick
+        # Ensure not duplicate with blue_pick
         red_candidates = [c for c in red_candidates if c['id'] != blue_pick['id']]
         if not red_candidates:
             continue
@@ -119,19 +119,19 @@ def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=Non
         for t in red_pick.get('tags', []):
             red_tag_count[t] = red_tag_count.get(t, 0) + 1
 
-    # Bước 2: xử lý các tag có trong TAG_LIMITS (áp dụng min nếu > 0, và max nếu != 0)
+    # Step 2: Handle tags in TAG_LIMITS (apply min if > 0, and max if != 0)
     for tag, (min_limit, max_limit) in TAG_LIMITS.items():
         if max_limit == 0:
-            continue  # tag bị cấm hoàn toàn
+            continue  # tag is banned entirely
 
         available_champs = [c for c in tag_map.get(tag, []) if c['id'] not in used_ids]
         if min_limit == 0:
-            continue  # không bắt buộc phải có từ đầu, chỉ xử lý khi còn slot ở bước sau
+            continue  # not required to have from the start, only handle if slots remain in next step
 
         if len(available_champs) < 2 * min_limit:
-            continue  # không đủ để chia đều
+            continue  # not enough to split evenly
 
-        # Loại tướng từng ở mỗi đội
+        # Remove each from each team
         blue_candidates = [c for c in available_champs if c['id'] not in exclude_blue_ids]
         red_candidates = [c for c in available_champs if c['id'] not in exclude_red_ids]
         if len(blue_candidates) < min_limit or len(red_candidates) < min_limit:
@@ -151,7 +151,7 @@ def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=Non
                 for t in champ.get('tags', []):
                     red_tag_count[t] = red_tag_count.get(t, 0) + 1
 
-    # Bước 3: phân tướng còn lại vào team, tuân thủ max của TAG_LIMITS
+    # Step 3: Distribute remaining champions into teams, respecting TAG_LIMITS max
     all_champ_ids = set()
     champ_id_to_obj = {}
     for champs in tag_map.values():
@@ -202,21 +202,21 @@ def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
     champions = fetch_champions(version, cache_expire=cache_expire)
     tag_map = get_tag_map(version, cache_expire)
     team_size = MAX_TEAM_SIZE
-    # Loại riêng biệt từng đội
+    # Separate each team individually
     used_champions = set()
     blue_team, red_team, used_champions = pick_team_with_tags(
         tag_map, used_champions, team_size,
         exclude_blue_ids=_last_blue_team_ids,
         exclude_red_ids=_last_red_team_ids
     )
-    # Đảm bảo không trùng tướng giữa 2 đội
+    # Ensure no duplicate champions between 2 teams
     assert len(set(c['id'] for c in blue_team).intersection(c['id'] for c in red_team)) == 0
 
-    # Cập nhật cache cho lần random tiếp theo
+    # Update cache for the next random
     _last_blue_team_ids = set(c['id'] for c in blue_team)
     _last_red_team_ids = set(c['id'] for c in red_team)
 
-    # Đọc nội dung CSS từ file với đường dẫn tuyệt đối
+    # Read CSS content from file with absolute path
     current_dir = Path(__file__).parent.resolve()
     css_file_path = current_dir / 'css' / 'aram-style.css'
    
@@ -246,7 +246,7 @@ def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
     </html>
     """
 
-    # Sử dụng html2image để render HTML thành ảnh PNG
+    # Use html2image to render HTML to PNG
     hti = Html2Image(output_path='.')
     output_filename = 'aram_teams.png'
     hti.screenshot(
@@ -255,11 +255,11 @@ def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
         size=(IMG_WIDTH, IMG_HEIGHT)
     )
 
-    # Đọc file ảnh vừa tạo và encode base64
+    # Read the newly created image file and encode base64
     with open(output_filename, 'rb') as img_file:
         base64_image = base64.b64encode(img_file.read()).decode('utf-8')
 
-    # Xóa file ảnh tạm nếu muốn (tuỳ chọn)
+    # Delete temp image file if desired (optional)
     try:
         os.remove(output_filename)
     except Exception:

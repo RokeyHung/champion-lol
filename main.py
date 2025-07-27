@@ -22,7 +22,7 @@ client = commands.Bot(command_prefix="!", intents=intents)
 # Event: Bot is ready
 @client.event
 async def on_ready():
-    print(f"✅ Bot đang chạy với tên {client.user}")
+    print(f"✅ Bot is running as {client.user}")
 
 
 # Event: Message is received

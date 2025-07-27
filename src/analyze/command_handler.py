@@ -42,9 +42,9 @@ async def handle_champion_cache(message):
         cache_time_str = 'N/A'
     msg = (
         f"Version: {stats['version']}\n"
-        f"Số tướng cache: {stats['champion_count']}\n"
-        f"Số tag cache: {stats['tag_count']}\n"
-        f"Thời gian cache: {cache_time_str}"
+        f"Number of cached champions: {stats['champion_count']}\n"
+        f"Number of cached tags: {stats['tag_count']}\n"
+        f"Cache time: {cache_time_str}"
     )
     await message.channel.send(msg)
 
@@ -57,25 +57,25 @@ async def handle_champion_cache_more(message):
         cache_time_str = 'N/A'
     cache_age = stats['cache_age_hours']
     if cache_age is not None:
-        cache_age_str = f"{cache_age:.2f} giờ"
+        cache_age_str = f"{cache_age:.2f} hours"
     else:
         cache_age_str = 'N/A'
     cache_expire_hr = int(stats['cache_expire']/3600)
     msg = (
         f"Version: {stats['version']}\n"
         f"Link API: {stats['api_url']}\n"
-        f"Số tag cache: {stats['tag_count']}\n"
-        f"Danh sách tag: {', '.join(stats['tag_list'])}\n"
-        f"Thời gian cache: {cache_time_str}\n"
-        f"Cache đã lưu: {cache_age_str}\n"
-        f"Cache tối đa: {cache_expire_hr} giờ"
+        f"Number of cached tags: {stats['tag_count']}\n"
+        f"Tag list: {', '.join(stats['tag_list'])}\n"
+        f"Cache time: {cache_time_str}\n"
+        f"Cache age: {cache_age_str}\n"
+        f"Cache max: {cache_expire_hr} hours"
     )
     await message.channel.send(msg)
 
 async def handle_clear_team_cache(message):
     _last_blue_team_ids.clear()
     _last_red_team_ids.clear()
-    await message.channel.send('Đã xóa cache team (2 đội random gần nhất)!')
+    await message.channel.send('Team cache (2 most recent random teams) cleared!')
 
 async def handle_clear_all_cache(message):
     global _version_cache, _version_cache_time
@@ -87,4 +87,4 @@ async def handle_clear_all_cache(message):
     _tag_champion_cache_time.clear()
     _last_blue_team_ids.clear()
     _last_red_team_ids.clear()
-    await message.channel.send('Đã xóa toàn bộ cache bot!') 
+    await message.channel.send('All bot cache cleared!') 
