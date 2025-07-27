@@ -1,0 +1,11 @@
+```
+Các lệnh bot hỗ trợ:
+
+!champion-help - Hiển thị danh sách lệnh này
+!champion-cache - Thống kê cache tướng ARAM
+!champion-cache-more - Thống kê cache tướng ARAM chi tiết hơn
+!aram-random - Tạo đội hình ARAM ngẫu nhiên
+!aram-random-summary - Hiển thị mô tả logic random chia đội ARAM
+!clear-team-cache - Xóa cache 2 đội random gần nhất
+!clear-all-cache - Xóa toàn bộ cache bot (dữ liệu tướng, version, team, ...)
+```

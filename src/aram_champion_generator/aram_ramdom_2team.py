@@ -24,6 +24,11 @@ _champions_cache_time = {}
 _tag_champion_cache = {} 
 _tag_champion_cache_time = {} 
 
+# Cache các tướng vừa random ở lần trước
+# Cache riêng biệt cho từng đội
+_last_blue_team_ids = set()
+_last_red_team_ids = set()
+
 # Biến cache expire dùng chung toàn project
 CACHE_EXPIRE_SECONDS = 60*60*6  # 6 giờ
 
@@ -73,15 +78,11 @@ def get_tag_map(version, cache_expire=3600):
     champions = fetch_champions(version, cache_expire)
     return build_tag_map(champions, version, cache_expire)
 
-def pick_team_with_tags(tag_map, used_champions, team_size):
-    """
-    - Với tag có trong TAG_LIMITS:
-        + Nếu max == 0 → không cho phép tag này trong team
-        + Nếu min > 0 → bắt buộc phải có ít nhất min
-        + Nếu min = 0 → không bắt buộc, nhưng không vượt quá max
-    - Với tag không có trong TAG_LIMITS:
-        + Mỗi đội cần ít nhất 1 tướng nếu có đủ
-    """
+def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=None, exclude_red_ids=None):
+    if exclude_blue_ids is None:
+        exclude_blue_ids = set()
+    if exclude_red_ids is None:
+        exclude_red_ids = set()
   
     blue_team = []
     red_team = []
@@ -98,15 +99,24 @@ def pick_team_with_tags(tag_map, used_champions, team_size):
         if len(available_champs) < 2:
             continue
         
-        chosen = random.sample(available_champs, 2)
-        blue_team.append(chosen[0])
-        red_team.append(chosen[1])
-        used_ids.add(chosen[0]['id'])
-        used_ids.add(chosen[1]['id'])
-
-        for t in chosen[0].get('tags', []):
+        # Loại tướng từng ở mỗi đội
+        blue_candidates = [c for c in available_champs if c['id'] not in exclude_blue_ids]
+        red_candidates = [c for c in available_champs if c['id'] not in exclude_red_ids and c['id'] not in (blue_candidates[0]['id'] if blue_candidates else set())]
+        if not blue_candidates or not red_candidates:
+            continue
+        blue_pick = random.choice(blue_candidates)
+        # Đảm bảo không trùng với blue_pick
+        red_candidates = [c for c in red_candidates if c['id'] != blue_pick['id']]
+        if not red_candidates:
+            continue
+        red_pick = random.choice(red_candidates)
+        blue_team.append(blue_pick)
+        red_team.append(red_pick)
+        used_ids.add(blue_pick['id'])
+        used_ids.add(red_pick['id'])
+        for t in blue_pick.get('tags', []):
             blue_tag_count[t] = blue_tag_count.get(t, 0) + 1
-        for t in chosen[1].get('tags', []):
+        for t in red_pick.get('tags', []):
             red_tag_count[t] = red_tag_count.get(t, 0) + 1
 
     # Bước 2: xử lý các tag có trong TAG_LIMITS (áp dụng min nếu > 0, và max nếu != 0)
@@ -121,17 +131,21 @@ def pick_team_with_tags(tag_map, used_champions, team_size):
         if len(available_champs) < 2 * min_limit:
             continue  # không đủ để chia đều
 
-        chosen = random.sample(available_champs, 2 * min_limit)
-        for i in range(min_limit):
+        # Loại tướng từng ở mỗi đội
+        blue_candidates = [c for c in available_champs if c['id'] not in exclude_blue_ids]
+        red_candidates = [c for c in available_champs if c['id'] not in exclude_red_ids]
+        if len(blue_candidates) < min_limit or len(red_candidates) < min_limit:
+            continue
+        blue_picks = random.sample(blue_candidates, min_limit)
+        red_picks = random.sample(red_candidates, min_limit)
+        for champ in blue_picks:
             if len(blue_team) < team_size:
-                champ = chosen[i]
                 blue_team.append(champ)
                 used_ids.add(champ['id'])
                 for t in champ.get('tags', []):
                     blue_tag_count[t] = blue_tag_count.get(t, 0) + 1
-
+        for champ in red_picks:
             if len(red_team) < team_size:
-                champ = chosen[i + min_limit]
                 red_team.append(champ)
                 used_ids.add(champ['id'])
                 for t in champ.get('tags', []):
@@ -153,8 +167,8 @@ def pick_team_with_tags(tag_map, used_champions, team_size):
         champ = remain_pool.pop()
         tags = champ.get('tags', [])
 
-        can_add_blue = len(blue_team) < team_size
-        can_add_red = len(red_team) < team_size
+        can_add_blue = len(blue_team) < team_size and champ['id'] not in exclude_blue_ids
+        can_add_red = len(red_team) < team_size and champ['id'] not in exclude_red_ids
 
         for tag in tags:
             if tag in TAG_LIMITS:
@@ -182,15 +196,25 @@ def pick_team_with_tags(tag_map, used_champions, team_size):
 
 
 def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
+    global _last_blue_team_ids, _last_red_team_ids
     # Fetch the latest version and champions data
     version = fetch_latest_version(cache_expire=cache_expire)
     champions = fetch_champions(version, cache_expire=cache_expire)
     tag_map = get_tag_map(version, cache_expire)
     team_size = MAX_TEAM_SIZE
+    # Loại riêng biệt từng đội
     used_champions = set()
-    blue_team, red_team, used_champions = pick_team_with_tags(tag_map, used_champions, team_size)
+    blue_team, red_team, used_champions = pick_team_with_tags(
+        tag_map, used_champions, team_size,
+        exclude_blue_ids=_last_blue_team_ids,
+        exclude_red_ids=_last_red_team_ids
+    )
     # Đảm bảo không trùng tướng giữa 2 đội
     assert len(set(c['id'] for c in blue_team).intersection(c['id'] for c in red_team)) == 0
+
+    # Cập nhật cache cho lần random tiếp theo
+    _last_blue_team_ids = set(c['id'] for c in blue_team)
+    _last_red_team_ids = set(c['id'] for c in red_team)
 
     # Đọc nội dung CSS từ file với đường dẫn tuyệt đối
     current_dir = Path(__file__).parent.resolve()

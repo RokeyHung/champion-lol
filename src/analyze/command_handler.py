@@ -2,6 +2,12 @@ from src.aram_champion_generator.aram_ramdom_2team import generate_image
 from src.discord_function.send_image_base64 import send_base64_image
 from src.analyze.cache_stats import get_cache_stats, get_cache_stats_more
 import datetime
+from src.aram_champion_generator.aram_ramdom_2team import (
+    _last_blue_team_ids, _last_red_team_ids,
+    _version_cache, _version_cache_time,
+    _champions_cache, _champions_cache_time,
+    _tag_champion_cache, _tag_champion_cache_time
+)
 
 async def handle_aram_random(message):
     try:
@@ -11,13 +17,13 @@ async def handle_aram_random(message):
         print(f'Error generating image: {err}')
         await message.channel.send('Failed to generate image.')
 
-async def handle_champion_help(message):
+async def handle_champion_help(message, path='docs/help_text.txt'):
     try:
-        with open('help_text.txt', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             help_text = f.read()
         await message.channel.send(help_text)
     except Exception as err:
-        await message.channel.send('Failed to read help_text.txt')
+        await message.channel.send(f'Failed to read {path}')
 
 async def handle_champion_cache(message):
     stats = get_cache_stats()
@@ -56,4 +62,21 @@ async def handle_champion_cache_more(message):
         f"Cache đã lưu: {cache_age_str}\n"
         f"Cache tối đa: {cache_expire_hr} giờ"
     )
-    await message.channel.send(msg) 
+    await message.channel.send(msg)
+
+async def handle_clear_team_cache(message):
+    _last_blue_team_ids.clear()
+    _last_red_team_ids.clear()
+    await message.channel.send('Đã xóa cache team (2 đội random gần nhất)!')
+
+async def handle_clear_all_cache(message):
+    global _version_cache, _version_cache_time
+    _version_cache = None
+    _version_cache_time = 0
+    _champions_cache.clear()
+    _champions_cache_time.clear()
+    _tag_champion_cache.clear()
+    _tag_champion_cache_time.clear()
+    _last_blue_team_ids.clear()
+    _last_red_team_ids.clear()
+    await message.channel.send('Đã xóa toàn bộ cache bot!') 
