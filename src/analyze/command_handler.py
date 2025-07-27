@@ -1,3 +1,11 @@
+import sys
+import os
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath('.'), relative_path)
+
 from src.aram_champion_generator.aram_ramdom_2team import generate_image
 from src.discord_function.send_image_base64 import send_base64_image
 from src.analyze.cache_stats import get_cache_stats, get_cache_stats_more
@@ -19,7 +27,7 @@ async def handle_aram_random(message):
 
 async def handle_champion_help(message, path='docs/help_text.txt'):
     try:
-        with open(path, encoding='utf-8') as f:
+        with open(resource_path(path), encoding='utf-8') as f:
             help_text = f.read()
         await message.channel.send(help_text)
     except Exception as err:
