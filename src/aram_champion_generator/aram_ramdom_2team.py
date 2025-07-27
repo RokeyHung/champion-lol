@@ -42,6 +42,9 @@ _champions_cache_time = {}
 _tag_champion_cache = {} 
 _tag_champion_cache_time = {} 
 
+# Biến cache expire dùng chung toàn project
+CACHE_EXPIRE_SECONDS = 60*60*6  # 6 giờ
+
 # Fetch the latest version from the League of Legends API, with cache
 def fetch_latest_version(cache_expire=3600):
     global _version_cache, _version_cache_time

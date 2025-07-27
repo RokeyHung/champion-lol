@@ -1,0 +1,59 @@
+from src.aram_champion_generator.aram_ramdom_2team import generate_image
+from src.discord_function.send_image_base64 import send_base64_image
+from src.analyze.cache_stats import get_cache_stats, get_cache_stats_more
+import datetime
+
+async def handle_aram_random(message):
+    try:
+        base64_string = generate_image()
+        await send_base64_image(message, base64_string, "Fighting!!")
+    except Exception as err:
+        print(f'Error generating image: {err}')
+        await message.channel.send('Failed to generate image.')
+
+async def handle_champion_help(message):
+    try:
+        with open('help_text.txt', encoding='utf-8') as f:
+            help_text = f.read()
+        await message.channel.send(help_text)
+    except Exception as err:
+        await message.channel.send('Failed to read help_text.txt')
+
+async def handle_champion_cache(message):
+    stats = get_cache_stats()
+    cache_time = stats['cache_time']
+    if cache_time:
+        cache_time_str = datetime.datetime.fromtimestamp(cache_time).strftime('%d/%m/%Y - %H:%M:%S')
+    else:
+        cache_time_str = 'N/A'
+    msg = (
+        f"Version: {stats['version']}\n"
+        f"Số tướng cache: {stats['champion_count']}\n"
+        f"Số tag cache: {stats['tag_count']}\n"
+        f"Thời gian cache: {cache_time_str}"
+    )
+    await message.channel.send(msg)
+
+async def handle_champion_cache_more(message):
+    stats = get_cache_stats_more()
+    cache_time = stats['cache_time']
+    if cache_time:
+        cache_time_str = datetime.datetime.fromtimestamp(cache_time).strftime('%d/%m/%Y - %H:%M:%S')
+    else:
+        cache_time_str = 'N/A'
+    cache_age = stats['cache_age_hours']
+    if cache_age is not None:
+        cache_age_str = f"{cache_age:.2f} giờ"
+    else:
+        cache_age_str = 'N/A'
+    cache_expire_hr = int(stats['cache_expire']/3600)
+    msg = (
+        f"Version: {stats['version']}\n"
+        f"Link API: {stats['api_url']}\n"
+        f"Số tag cache: {stats['tag_count']}\n"
+        f"Danh sách tag: {', '.join(stats['tag_list'])}\n"
+        f"Thời gian cache: {cache_time_str}\n"
+        f"Cache đã lưu: {cache_age_str}\n"
+        f"Cache tối đa: {cache_expire_hr} giờ"
+    )
+    await message.channel.send(msg) 
