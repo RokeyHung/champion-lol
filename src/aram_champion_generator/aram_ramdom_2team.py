@@ -206,15 +206,15 @@ def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
     used_champions = set()
     blue_team, red_team, used_champions = pick_team_with_tags(
         tag_map, used_champions, team_size,
-        exclude_blue_ids=_last_blue_team_ids,
-        exclude_red_ids=_last_red_team_ids
+        exclude_blue_ids=_last_red_team_ids,
+        exclude_red_ids=_last_blue_team_ids
     )
     # Ensure no duplicate champions between 2 teams
     assert len(set(c['id'] for c in blue_team).intersection(c['id'] for c in red_team)) == 0
 
     # Update cache for the next random
-    _last_blue_team_ids = set(c['id'] for c in blue_team)
-    _last_red_team_ids = set(c['id'] for c in red_team)
+    _last_red_team_ids = set(c['id'] for c in blue_team)
+    _last_blue_team_ids = set(c['id'] for c in red_team)
 
     # Read CSS content from file with absolute path
     current_dir = Path(__file__).parent.resolve()

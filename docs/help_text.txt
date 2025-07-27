@@ -2,6 +2,7 @@
 Các lệnh bot hỗ trợ:
 
 !champion-help - Hiển thị danh sách lệnh này
+!aram-rule - Hiển thị luật chơi ARAM
 !aram-random - Tạo đội hình ARAM ngẫu nhiên
 !aram-random-summary - Hiển thị mô tả logic random chia đội ARAM
 !call-teams - Tìm 2 phòng voice liền kề đang trống và mời mọi người vào Blue Team/Red Team

@@ -59,6 +59,9 @@ async def on_message(message):
     if message.content == '!call-teams':
         await handle_call_teams(message)
         return
+    if message.content == '!aram-rule':
+        await handle_champion_help(message, "docs/aram-rule.txt")
+        return
 
 
 # Run the bot with your token

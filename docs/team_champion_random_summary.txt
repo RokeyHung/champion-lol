@@ -7,9 +7,12 @@ Tóm tắt logic random tướng chia đội:
   * Ví dụ: Assassin từ 1 đến 3 tướng, Marksman từ 2 đến 4.
   * Các vai trò khác: mỗi đội cố gắng có ít nhất 1 tướng nếu còn đủ.
 
-* Cache tướng lần trước (theo từng đội):
-  * Tướng từng thuộc đội xanh ở lần trước sẽ không xuất hiện lại ở đội xanh, và tương tự cho đội đỏ.
-  * Tuy nhiên, tướng đội xanh cũ vẫn có thể vào đội đỏ mới (và ngược lại).
+* Cache tướng lần trước (áp dụng riêng theo từng đội):
+  * Để hiểu cơ chế này một cách đầy đủ, bạn nên đọc luật chơi ARAM cùng với lệnh `!aram-rule` trước.
+  * Khi random đội mới, bot sẽ tránh chọn lại tướng đã từng xuất hiện ở đội đối phương trong lần random gần nhất:
+    * Nếu một tướng đã thuộc đội đỏ ở lần trước thì sẽ không được chọn vào đội xanh trong lần hiện tại.
+    * Ngược lại, tướng từng ở đội xanh trước đó cũng không được vào đội đỏ lần này.
+  * Tuy nhiên, tướng từng ở đội đỏ vẫn có thể tiếp tục xuất hiện trong đội đỏ, và tương tự với đội xanh.
 
 * Trình tự random:
   1. Chọn tướng cho các tag không nằm trong TAG_LIMITS, cố gắng đảm bảo mỗi đội có ít nhất 1 tướng.

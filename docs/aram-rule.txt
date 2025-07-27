@@ -1,0 +1,19 @@
+```
+ARAM RULES
+
+1. Hãy chia đội cân bằng để đảm bảo trận đấu công bằng và có 1 trận đấu tuyệt vời cho cả hai bên.
+2. Trong suốt quá trình chơi:
+   * Mỗi người chơi chỉ được sử dụng 1 tướng duy nhất trong toàn bộ chuỗi trận.
+      * Lý do: nếu một người chơi được lặp lại nhiều lần một tướng mạnh, đội đối thủ có thể cảm thấy bất công hoặc ức chế.
+   * Nếu chọn nhầm tướng, hãy thoát ngay trước khi vào trận (ở màn hình chọn tướng).
+   * Nếu cố tình chọn lại và bị phát hiện đã sử dụng tướng đó trước đó, đội đó sẽ bị xử thua ngay lập tức.
+3. Sau khi kết thúc một trận đấu, hai đội sẽ đổi màu đội cho nhau ở trận kế tiếp:
+   * Người chơi của team Blue sẽ chuyển sang team Red.
+   * Người chơi của team Red sẽ chuyển sang team Blue.
+   * Điều này giúp cân bằng trải nghiệm và tránh lặp chiến thuật.
+4. Không blame, chỉ trích, hay gây áp lực cho đồng đội trong bất kỳ hoàn cảnh nào. Đây là trận đấu vui là chính, thắng là chủ yếu.
+5. Các luật khác có thể được bổ sung theo thỏa thuận chung trước trận đấu.
+
+Fighting!!
+Chơi hết mình, tôn trọng lẫn nhau và cùng tạo ra những trận đấu thật đáng nhớ!
+```
