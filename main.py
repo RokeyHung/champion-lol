@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os
+import asyncio
 
 load_dotenv() 
 from discord import Intents
@@ -18,11 +19,31 @@ intents = Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix="!", intents=intents)
 
+# Queue to serialize ARAM random requests
+request_queue = asyncio.Queue()
+_worker_task = None
+
+async def _queue_worker():
+    while True:
+        message = await request_queue.get()
+        try:
+            await handle_aram_random(message)
+        except Exception as err:
+            try:
+                await message.channel.send('An error occurred while processing !aram-random.')
+            except Exception:
+                pass
+        finally:
+            request_queue.task_done()
+
 
 # Event: Bot is ready
 @client.event
 async def on_ready():
     print(f"✅ Bot is running as {client.user}")
+    global _worker_task
+    if _worker_task is None or _worker_task.done():
+        _worker_task = asyncio.create_task(_queue_worker())
 
 
 # Event: Message is received
@@ -44,7 +65,7 @@ async def on_message(message):
         await handle_champion_cache_more(message)
         return
     if message.content == '!aram-random':
-        await handle_aram_random(message)
+        await request_queue.put(message)
         return
     if message.content == '!aram-random-summary':
         await handle_champion_help(message, "docs/team_champion_random_summary.txt")

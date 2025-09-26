@@ -13,5 +13,5 @@ async def send_base64_image(message, data_url, content=""):
   # Step 3: Create the image attachment
   file = File(io.BytesIO(image_bytes), filename="image.png")
 
-  # Step 4: Send the image in the message
-  await message.channel.send(content=content, files=[file])
+  # Step 4: Reply to the invoking message with the image
+  await message.reply(content=content, files=[file])

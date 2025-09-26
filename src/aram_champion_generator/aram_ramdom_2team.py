@@ -233,7 +233,9 @@ def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
 
     # Use html2image to render HTML to PNG
     hti = Html2Image(output_path='.')
-    output_filename = 'aram_teams.png'
+    # Unique filename to avoid collisions on rapid consecutive calls (Windows file locks)
+    unique_suffix = f"{int(time.time()*1000)}_{random.randint(1000,9999)}"
+    output_filename = f'aram_teams_{unique_suffix}.png'
     hti.screenshot(
         html_str=html_content,
         save_as=output_filename,
