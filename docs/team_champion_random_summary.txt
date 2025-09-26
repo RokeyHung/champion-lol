@@ -4,15 +4,8 @@ Tóm tắt logic random tướng chia đội:
 * Mỗi đội tối đa 15 tướng.
 
 * Giới hạn vai trò (TAG_LIMITS):
-  * Ví dụ: Assassin từ 1 đến 3 tướng, Marksman từ 2 đến 4.
+  * Assassin từ 1 đến 3 tướng, Marksman từ 2 đến 4.
   * Các vai trò khác: mỗi đội cố gắng có ít nhất 1 tướng nếu còn đủ.
-
-* Cache tướng lần trước (áp dụng riêng theo từng đội):
-  * Để hiểu cơ chế này một cách đầy đủ, bạn nên đọc luật chơi ARAM cùng với lệnh `!aram-rule` trước.
-  * Khi random đội mới, bot sẽ tránh chọn lại tướng đã từng xuất hiện ở đội đối phương trong lần random gần nhất:
-    * Nếu một tướng đã thuộc đội đỏ ở lần trước thì sẽ không được chọn vào đội xanh trong lần hiện tại.
-    * Ngược lại, tướng từng ở đội xanh trước đó cũng không được vào đội đỏ lần này.
-  * Tuy nhiên, tướng từng ở đội đỏ vẫn có thể tiếp tục xuất hiện trong đội đỏ, và tương tự với đội xanh.
 
 * Trình tự random:
   1. Chọn tướng cho các tag không nằm trong TAG_LIMITS, cố gắng đảm bảo mỗi đội có ít nhất 1 tướng.
@@ -21,5 +14,5 @@ Tóm tắt logic random tướng chia đội:
 
 * Không có tướng trùng lặp giữa hai đội trong cùng một lần random.
 
-Kết quả: Hai đội được tạo ra ngẫu nhiên, đa dạng vai trò, không lặp lại tướng đã xuất hiện ở cùng đội trước đó, đảm bảo tính công bằng và thú vị cho mỗi lần chia.
+Kết quả: Hai đội được tạo ra ngẫu nhiên, đa dạng vai trò, đảm bảo tính công bằng và thú vị cho mỗi lần chia.
 ```

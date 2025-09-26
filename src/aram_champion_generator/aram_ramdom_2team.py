@@ -24,11 +24,6 @@ _champions_cache_time = {}
 _tag_champion_cache = {} 
 _tag_champion_cache_time = {} 
 
-# Cache các tướng vừa random ở lần trước
-# Cache riêng biệt cho từng đội
-_last_blue_team_ids = set()
-_last_red_team_ids = set()
-
 # Biến cache expire dùng chung toàn project
 CACHE_EXPIRE_SECONDS = 60*60*6  # 6 giờ
 
@@ -78,11 +73,7 @@ def get_tag_map(version, cache_expire=3600):
     champions = fetch_champions(version, cache_expire)
     return build_tag_map(champions, version, cache_expire)
 
-def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=None, exclude_red_ids=None):
-    if exclude_blue_ids is None:
-        exclude_blue_ids = set()
-    if exclude_red_ids is None:
-        exclude_red_ids = set()
+def pick_team_with_tags(tag_map, used_champions, team_size):
   
     blue_team = []
     red_team = []
@@ -100,8 +91,8 @@ def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=Non
             continue
         
         # Remove each from each team
-        blue_candidates = [c for c in available_champs if c['id'] not in exclude_blue_ids]
-        red_candidates = [c for c in available_champs if c['id'] not in exclude_red_ids and c['id'] not in (blue_candidates[0]['id'] if blue_candidates else set())]
+        blue_candidates = list(available_champs)
+        red_candidates = [c for c in available_champs if c['id'] not in (blue_candidates[0]['id'] if blue_candidates else set())]
         if not blue_candidates or not red_candidates:
             continue
         blue_pick = random.choice(blue_candidates)
@@ -132,8 +123,8 @@ def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=Non
             continue  # not enough to split evenly
 
         # Remove each from each team
-        blue_candidates = [c for c in available_champs if c['id'] not in exclude_blue_ids]
-        red_candidates = [c for c in available_champs if c['id'] not in exclude_red_ids]
+        blue_candidates = list(available_champs)
+        red_candidates = list(available_champs)
         if len(blue_candidates) < min_limit or len(red_candidates) < min_limit:
             continue
         blue_picks = random.sample(blue_candidates, min_limit)
@@ -167,8 +158,8 @@ def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=Non
         champ = remain_pool.pop()
         tags = champ.get('tags', [])
 
-        can_add_blue = len(blue_team) < team_size and champ['id'] not in exclude_blue_ids
-        can_add_red = len(red_team) < team_size and champ['id'] not in exclude_red_ids
+        can_add_blue = len(blue_team) < team_size
+        can_add_red = len(red_team) < team_size
 
         for tag in tags:
             if tag in TAG_LIMITS:
@@ -196,7 +187,6 @@ def pick_team_with_tags(tag_map, used_champions, team_size, exclude_blue_ids=Non
 
 
 def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
-    global _last_blue_team_ids, _last_red_team_ids
     # Fetch the latest version and champions data
     version = fetch_latest_version(cache_expire=cache_expire)
     champions = fetch_champions(version, cache_expire=cache_expire)
@@ -205,16 +195,11 @@ def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
     # Separate each team individually
     used_champions = set()
     blue_team, red_team, used_champions = pick_team_with_tags(
-        tag_map, used_champions, team_size,
-        exclude_blue_ids=_last_red_team_ids,
-        exclude_red_ids=_last_blue_team_ids
+        tag_map, used_champions, team_size
     )
     # Ensure no duplicate champions between 2 teams
     assert len(set(c['id'] for c in blue_team).intersection(c['id'] for c in red_team)) == 0
 
-    # Update cache for the next random
-    _last_red_team_ids = set(c['id'] for c in blue_team)
-    _last_blue_team_ids = set(c['id'] for c in red_team)
 
     # Read CSS content from file with absolute path
     current_dir = Path(__file__).parent.resolve()

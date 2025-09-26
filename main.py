@@ -9,7 +9,6 @@ from src.analyze.command_handler import (
     handle_champion_help,
     handle_champion_cache,
     handle_champion_cache_more,
-    handle_clear_team_cache,
     handle_clear_all_cache,
     handle_call_teams
 )
@@ -49,9 +48,6 @@ async def on_message(message):
         return
     if message.content == '!aram-random-summary':
         await handle_champion_help(message, "docs/team_champion_random_summary.txt")
-        return
-    if message.content == '!clear-team-cache':
-        await handle_clear_team_cache(message)
         return
     if message.content == '!clear-all-cache':
         await handle_clear_all_cache(message)
