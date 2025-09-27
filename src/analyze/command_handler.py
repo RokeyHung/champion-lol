@@ -22,8 +22,11 @@ async def handle_aram_random(message):
         base64_string = generate_image()
         await send_base64_image(message, base64_string, "Fighting!!")
     except Exception as err:
+        import traceback
+        error_details = traceback.format_exc()
         print(f'Error generating image: {err}')
-        await message.channel.send('Failed to generate image.')
+        print(f'Full traceback: {error_details}')
+        await message.channel.send(f'Failed to generate image. Error: {str(err)}')
 
 async def handle_champion_help(message, path='docs/help_text.txt'):
     try:

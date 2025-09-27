@@ -121,13 +121,15 @@ def pick_team_with_tags(tag_map, used_champions, team_size):
 
         if len(available_champs) < 2 * min_limit:
             continue  # not enough to split evenly
-
-        # Remove each from each team
-        blue_candidates = list(available_champs)
-        red_candidates = list(available_champs)
-        if len(blue_candidates) < min_limit or len(red_candidates) < min_limit:
+        
+        # Pick champions for blue team first
+        blue_picks = random.sample(available_champs, min_limit)
+        blue_pick_ids = {c['id'] for c in blue_picks}
+        
+        # Then pick champions for red team, excluding blue picks
+        red_candidates = [c for c in available_champs if c['id'] not in blue_pick_ids]
+        if len(red_candidates) < min_limit:
             continue
-        blue_picks = random.sample(blue_candidates, min_limit)
         red_picks = random.sample(red_candidates, min_limit)
         for champ in blue_picks:
             if len(blue_team) < team_size:
@@ -186,31 +188,65 @@ def pick_team_with_tags(tag_map, used_champions, team_size):
     return blue_team, red_team, used_ids
 
 
+def debug_team_duplicates(blue_team, red_team):
+    """Debug function to check for duplicate champions between teams"""
+    blue_ids = {c['id'] for c in blue_team}
+    red_ids = {c['id'] for c in red_team}
+    duplicates = blue_ids.intersection(red_ids)
+    
+    if duplicates:
+        print(f"DUPLICATE CHAMPIONS FOUND: {duplicates}")
+        print(f"Blue team IDs: {blue_ids}")
+        print(f"Red team IDs: {red_ids}")
+        return True
+    return False
+
+
 def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
-    # Fetch the latest version and champions data
-    version = fetch_latest_version(cache_expire=cache_expire)
-    champions = fetch_champions(version, cache_expire=cache_expire)
-    tag_map = get_tag_map(version, cache_expire)
-    team_size = MAX_TEAM_SIZE
-    # Separate each team individually
-    used_champions = set()
-    blue_team, red_team, used_champions = pick_team_with_tags(
-        tag_map, used_champions, team_size
-    )
-    # Ensure no duplicate champions between 2 teams
-    assert len(set(c['id'] for c in blue_team).intersection(c['id'] for c in red_team)) == 0
+    try:
+        # Fetch the latest version and champions data
+        version = fetch_latest_version(cache_expire=cache_expire)
+        champions = fetch_champions(version, cache_expire=cache_expire)
+        tag_map = get_tag_map(version, cache_expire)
+        team_size = MAX_TEAM_SIZE
+        # Separate each team individually
+        used_champions = set()
+        blue_team, red_team, used_champions = pick_team_with_tags(
+            tag_map, used_champions, team_size
+        )
+        # Debug and ensure no duplicate champions between 2 teams
+        if debug_team_duplicates(blue_team, red_team):
+            raise Exception("Duplicate champions found between teams - this should not happen!")
+    except Exception as e:
+        raise Exception(f"Error in data fetching/team generation: {str(e)}")
 
 
     # Read CSS content from file with absolute path
     current_dir = Path(__file__).parent.resolve()
     css_file_path = current_dir / 'css' / 'aram-style.css'
+    
+    # Get the project root directory for font paths
+    project_root = Path(__file__).parent.parent.parent.resolve()
+    font_path = project_root / 'assets' / 'Open_Sans'
+   
+    # Read CSS content and replace font paths
+    with open(css_file_path, 'r', encoding='utf-8') as f:
+        css_content = f.read()
+    
+    # Replace relative font paths with absolute paths
+    css_content = css_content.replace(
+        "url('../assets/Open_Sans/",
+        f"url('file:///{font_path.as_posix()}/"
+    )
    
     # HTML content with the teams and their champions
     html_content = f"""
     <html>
     <head>
         <meta charset='utf-8'>
-        <link rel="stylesheet" href="{css_file_path}">
+        <style>
+        {css_content}
+        </style>
     </head>
     <body>
       <div class="team-container">
@@ -231,29 +267,38 @@ def generate_image(cache_expire=CACHE_EXPIRE_SECONDS):
     </html>
     """
 
-    # Use html2image to render HTML to PNG
-    hti = Html2Image(output_path='.')
-    # Unique filename to avoid collisions on rapid consecutive calls (Windows file locks)
-    unique_suffix = f"{int(time.time()*1000)}_{random.randint(1000,9999)}"
-    output_filename = f'aram_teams_{unique_suffix}.png'
-    hti.screenshot(
-        html_str=html_content,
-        save_as=output_filename,
-        size=(IMG_WIDTH, IMG_HEIGHT)
-    )
-
-    # Read the newly created image file and encode base64
-    with open(output_filename, 'rb') as img_file:
-        base64_image = base64.b64encode(img_file.read()).decode('utf-8')
-
-    # Delete temp image file if desired (optional)
     try:
-        os.remove(output_filename)
-    except Exception:
-        pass
+        # Use html2image to render HTML to PNG
+        hti = Html2Image(output_path='.')
+        # Unique filename to avoid collisions on rapid consecutive calls (Windows file locks)
+        unique_suffix = f"{int(time.time()*1000)}_{random.randint(1000,9999)}"
+        output_filename = f'aram_teams_{unique_suffix}.png'
+        hti.screenshot(
+            html_str=html_content,
+            save_as=output_filename,
+            size=(IMG_WIDTH, IMG_HEIGHT)
+        )
 
-    # Create the Data URL for the image
-    data_url = f"data:image/png;base64,{base64_image}"
+        # Read the newly created image file and encode base64
+        with open(output_filename, 'rb') as img_file:
+            base64_image = base64.b64encode(img_file.read()).decode('utf-8')
 
-    # Return the data URL
-    return data_url
+        # Delete temp image file if desired (optional)
+        try:
+            os.remove(output_filename)
+        except Exception:
+            pass
+
+        # Create the Data URL for the image
+        data_url = f"data:image/png;base64,{base64_image}"
+
+        # Return the data URL
+        return data_url
+    except Exception as e:
+        # Clean up temp file if it exists
+        try:
+            if 'output_filename' in locals():
+                os.remove(output_filename)
+        except Exception:
+            pass
+        raise Exception(f"Error in HTML rendering/image generation: {str(e)}")
